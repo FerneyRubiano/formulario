@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Público de Tickets</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+</head>
+<body class="container">
+    <nav><ul><li><strong>Dashboard de Soporte</strong></li></ul></nav>
+    <main>
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th>ID Ticket</th>
+                    <th>Nombre</th>
+                    <th>Prioridad</th>
+                    <th>Resumen IA</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-body">
+                </tbody>
+        </table>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://igyevkgttrpmpnquhifu.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneWV2a2d0dHJwbXBucXVoaWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTg0OTQsImV4cCI6MjA5NDE5NDQ5NH0.HrZlozdUbspRW5-Esuxk3Qnjoj2qZuWTnMR_x7KptrU';    //
+
+        async function obtenerTickets() {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/tickets?select=*`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            });
+            const tickets = await response.json();
+            const body = document.getElementById('tabla-body');
+            
+            tickets.forEach(t => {
+                const fila = `<tr>
+                    <td>${t.ticket_id}</td>
+                    <td>${t.nombre}</td>
+                    <td><mark>${t.prioridad}</mark></td>
+                    <td>${t.resumen_ia}</td>
+                </tr>`;
+                body.innerHTML += fila;
+            });
+        }
+        obtenerTickets();
+    </script>
+</body>
+</html>
