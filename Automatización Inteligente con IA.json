@@ -1,0 +1,261 @@
+{
+  "name": "Automatización Inteligente con IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket-soporte",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "783163af-8a74-4af4-9d2c-d5a0942427ff",
+      "name": "Webhook",
+      "webhookId": "0542d3bc-e4b0-450c-bdfd-4302f3799f76"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "{{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1376,
+        0
+      ],
+      "id": "2c4d6f4e-0893-4258-8e08-a245450f49b9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Acceder a los datos originales del formulario\nconst webhookData = $('Webhook').item.json.body;\n\n// 2. Acceder a la respuesta que ya tienes funcionando de la IA\nconst iaResponse = $input.first().json;\n\n// 3. Generar número de ticket aleatorio\nconst ticket = 'TK-' + Math.floor(10000 + Math.random() * 90000);\n\n// 4. Lógica de tiempos basada en la prioridad que calculó la IA\nconst prioridadFinal = iaResponse.prioridad_ia || webhookData.prioridad || \"Baja\";\nlet tiempoEstimado = '';\n\nswitch (prioridadFinal) {\n  case 'Alta':\n    tiempoEstimado = '2 horas';\n    break;\n  case 'Media':\n    tiempoEstimado = '8 horas';\n    break;\n  case 'Baja':\n    tiempoEstimado = '24 horas';\n    break;\n  default:\n    tiempoEstimado = 'Sin definir';\n}\n\n// 5. Crear el mensaje final para el correo y la respuesta del navegador\nconst mensaje = `Hola ${webhookData.nombre || 'Usuario'},\n\nTu solicitud fue registrada exitosamente.\n\nTicket: ${ticket}\nResumen IA: ${iaResponse.resumen}\nPrioridad calculada: ${prioridadFinal}\nTiempo estimado: ${tiempoEstimado}\n\nEquipo de Tecnología`;\n\n// 6. Retornar los datos limpios para los siguientes nodos\nreturn [\n  {\n    json: {\n      nombre: webhookData.nombre,\n      correo: webhookData.correo,\n      ticket: ticket,\n      prioridad: prioridadFinal,\n      resumen: iaResponse.resumen,\n      tiempoEstimado: tiempoEstimado,\n      mensaje: mensaje\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "10ebf0e8-07d4-457a-ba1a-5c464ed432ab",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.correo }}",
+        "subject": "Confirmación de solicitud de soporte",
+        "emailType": "text",
+        "message": "={{ $json.mensaje }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        0
+      ],
+      "id": "305437fc-16ec-4786-8eb2-cfa0498a39fc",
+      "name": "Send a message",
+      "webhookId": "b28f2342-536f-4bc8-94f5-5c3010dcbc80",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cjOyFWwtNvq9NQvP",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=\"Actúa como un experto en soporte técnico. Analiza la siguiente solicitud: '{{ $json.body.descripcion }}'.\n\nResponde estrictamente en formato JSON con dos campos:\n\n'prioridad_ia': Clasifica como 'Alta' si hay palabras de urgencia, error crítico o caída de sistema; 'Media' para errores de usuario; 'Baja' para consultas generales.\n\n'resumen': Un resumen de máximo 15 palabras de la descripción.\n\nEjemplo de respuesta: {\"prioridad_ia\": \"Alta\", \"resumen\": \"Fallo crítico en el servidor principal\"}\""
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "4d16e495-bcdb-4c03-98c9-4e79e83fb5ce",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "tickets",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ticket_id",
+              "fieldValue": "={{ $json.ticket }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $json.nombre }}"
+            },
+            {
+              "fieldId": "correo",
+              "fieldValue": "={{ $json.correo }}"
+            },
+            {
+              "fieldId": "prioridad",
+              "fieldValue": "={{ $json.prioridad }}"
+            },
+            {
+              "fieldId": "tiempo_estimado",
+              "fieldValue": "={{ $json.tiempoEstimado }}"
+            },
+            {
+              "fieldId": "mensaje",
+              "fieldValue": "={{ $json.mensaje }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "id": "ceb0f674-013e-4e5f-897f-8c84118aa0b9",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0MCpdA4Bxp9ys3qs",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "tickets"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "0aac1534-0de5-4044-a602-7a05b778bc63",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0MCpdA4Bxp9ys3qs",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e52532f7-c065-418e-b695-e5e115a96b88",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a3e5df7ee75fca7bf00dcff4373388d80fc7f641a2bdf9d9a7272ee11e58e975"
+  },
+  "id": "UbovwwVlBkXC8VFq",
+  "tags": []
+}

@@ -1,0 +1,59 @@
+INSTRUCCIONES DE CONFIGURACIÓN Y EJECUCIÓN - SISTEMA DE TICKETS IA
+
+Este documento detalla los pasos necesarios para desplegar y probar la solución de automatización de tickets de soporte técnico.
+
+1. COMPONENTES DEL PROYECTO
+--------------------------------------------------
+- Formulario HTML: Interfaz de usuario para la captura de solicitudes.
+- Flujo n8n: Motor de automatización y lógica de negocio.
+- OpenAI (IA): Clasificación de urgencia y resumen de solicitudes.
+- Supabase (DB): Base de datos PostgreSQL para persistencia.
+- Dashboard: Panel administrativo visual en Supabase.
+- Gmail: Sistema de notificación automática al usuario.
+
+2. CONFIGURACIÓN DEL ENTORNO
+--------------------------------------------------
+A. Base de Datos (Supabase):
+   1. Crear una tabla llamada 'tickets' con la siguiente estructura (SQL):
+      -- Crear la tabla de tickets
+CREATE TABLE tickets (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  ticket_id TEXT NOT NULL,
+  nombre TEXT,
+  correo TEXT,
+  prioridad TEXT,
+  tiempo_estimado TEXT,
+  mensaje TEXT,
+  fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Habilitar acceso
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir inserciones desde n8n" ON tickets FOR INSERT WITH CHECK (true);
+
+B. Automatización (n8n):
+   1. Importar el archivo JSON adjunto en un nuevo workflow de n8n.
+   2. Configurar las credenciales en n8n:
+      - OpenAI API: Ingresar API Key válida.
+      - Supabase API: Ingresar Host (Project URL) y Service Role Key (Secret).
+      - Gmail API: Conectar cuenta para envío de correos.
+   3. Copiar la 'Production URL' del nodo Webhook e insertarla en el atributo 'action' del formulario HTML.
+
+3. FLUJO DE EJECUCIÓN
+--------------------------------------------------
+1. El usuario completa el formulario en 'index.html'.
+2. n8n recibe los datos mediante un Webhook.
+3. El nodo de IA analiza la descripción, genera un resumen y asigna una prioridad (Alta/Media/Baja).
+4. El nodo de Código genera un ID único (TK-XXXXX) y calcula el tiempo de respuesta:
+   - Alta: 2 horas.
+   - Media: 8 horas.
+   - Baja: 24 horas.
+5. Se inserta el registro completo en la base de datos Supabase.
+6. Se envía un correo de confirmación al usuario con todos los detalles del ticket.
+
+4. VISUALIZACIÓN DE RESULTADOS (DASHBOARD)
+--------------------------------------------------
+Para visualizar y gestionar los tickets creados, acceder al 'Table Editor' en el panel de Supabase. Este panel permite:
+- Ver todos los tickets en tiempo real.
+- Filtrar por prioridad o fecha.
+- Realizar seguimiento administrativo de las solicitudes procesadas por la IA.
